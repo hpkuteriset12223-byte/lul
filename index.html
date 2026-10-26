@@ -3,308 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Realtime Firebase Image Viewer</title>
-    <!-- Tailwind CSS -->
+    <title>Pembayaran QRIS - TOKO SUKI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Font Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        @keyframes pulse-ring {
-            0% { transform: scale(0.95); opacity: 0.8; }
-            50% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(0.95); opacity: 0.8; }
-        }
-        .animate-pulse-fast {
-            animation: pulse-ring 1.5s infinite ease-in-out;
-        }
-        /* Style transisi ganti gambar */
-        .img-update-flash {
-            animation: flash-border 1s ease-out;
-        }
-        @keyframes flash-border {
-            0% { ring-width: 4px; ring-color: rgba(59, 130, 246, 0.8); transform: scale(1.02); }
-            100% { ring-width: 0px; ring-color: transparent; transform: scale(1); }
-        }
-    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-900 text-slate-100 flex items-center justify-center min-h-screen p-4">
 
-    <!-- Container Utama Centered -->
-    <div class="w-full max-w-md bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-700/60 overflow-hidden transition-all duration-300 hover:shadow-blue-500/10 hover:border-slate-600">
+    <div class="max-w-sm w-full bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700 text-center">
+        <!-- Info Toko & Nominal -->
+        <h1 class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">TOKO SUKI</h1>
+        <p class="text-xs text-slate-500 mb-4">Silakan scan QRIS di bawah ini</p>
         
-        <!-- Header Card -->
-        <div class="p-5 border-b border-slate-700/60 flex items-center justify-between bg-slate-800/40">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
-                    <i class="fa-solid fa-bolt text-lg"></i>
-                </div>
-                <div>
-                    <h1 class="text-base font-semibold text-white tracking-wide">Firebase Live Image</h1>
-                    <p class="text-xs text-slate-400">Path: <code class="bg-slate-900/60 px-1.5 py-0.5 rounded text-blue-400">data/foto</code></p>
-                </div>
-            </div>
-            <!-- Status Live Indicator -->
-            <div id="status-badge" class="flex items-center space-x-2 bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-medium">
-                <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-                <span id="status-text">Menghubungkan...</span>
-            </div>
+        <div id="nominalText" class="text-emerald-400 font-extrabold text-3xl mb-6">Rp 0</div>
+        
+        <!-- Gambar QR Code -->
+        <div class="bg-white p-4 rounded-2xl inline-block shadow-inner mb-6">
+            <div id="qrcode"></div>
         </div>
 
-        <!-- Body Card: Container Gambar -->
-        <div class="p-6 flex flex-col items-center justify-center">
-            
-            <div id="image-frame" class="relative w-full aspect-square bg-slate-950 rounded-xl overflow-hidden border border-slate-700/80 shadow-inner flex items-center justify-center transition-all duration-300">
-                
-                <!-- State Loading / Skeleton -->
-                <div id="loading-state" class="flex flex-col items-center justify-center space-y-3 p-6 text-center">
-                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-blue-500"></i>
-                    <p class="text-xs text-slate-400">Mencoba mengambil data foto realtime...</p>
-                </div>
-
-                <!-- State Foto Kosong -->
-                <div id="empty-state" class="hidden flex flex-col items-center justify-center space-y-3 p-6 text-center text-slate-500">
-                    <i class="fa-regular fa-image text-5xl"></i>
-                    <p class="text-xs font-medium">Belum ada foto pada database</p>
-                    <p class="text-[11px] text-slate-600">Upload foto baru menggunakan tombol di bawah untuk mengisi data.</p>
-                </div>
-
-                <!-- Element Gambar Utama -->
-                <img id="firebase-image" src="" alt="Realtime Firebase Image" class="hidden w-full h-full object-cover transition-opacity duration-300">
-
-                <!-- Overlay Info Update Baru -->
-                <div id="update-toast" class="opacity-0 transition-opacity duration-500 absolute top-3 right-3 bg-blue-600/90 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg backdrop-blur-sm shadow-lg flex items-center gap-1.5 pointer-events-none">
-                    <i class="fa-solid fa-sync fa-spin text-[10px]"></i>
-                    <span>Foto Diperbarui!</span>
-                </div>
-            </div>
-
-            <!-- Detail Terakhir Diupdate -->
-            <div class="w-full mt-4 flex items-center justify-between text-xs text-slate-400 px-1">
-                <span class="flex items-center gap-1.5">
-                    <i class="fa-regular fa-clock text-slate-500"></i>
-                    <span>Update Terakhir:</span>
-                </span>
-                <span id="last-update-time" class="font-mono text-slate-300">-</span>
-            </div>
-        </div>
-
-        <!-- Footer Card: Upload / Testing Controls -->
-        <div class="p-5 bg-slate-950/40 border-t border-slate-700/60 space-y-3">
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-slate-300">Uji Coba Update Live</span>
-                <span class="text-[10px] text-slate-500">Otomatis Convert ke Base64</span>
-            </div>
-
-            <div class="flex gap-2">
-                <!-- File Input Hidden -->
-                <input type="file" id="file-input" accept="image/*" class="hidden">
-                
-                <!-- Button Trigger Upload -->
-                <button id="btn-upload" class="flex-1 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white text-xs font-medium py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fa-solid fa-upload"></i>
-                    <span>Pilih & Upload Foto Baru</span>
-                </button>
-
-                <!-- Button Hapus Foto -->
-                <button id="btn-delete" title="Hapus foto dari database" class="bg-slate-800 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-slate-400 border border-slate-700 px-3 py-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center">
-                    <i class="fa-regular fa-trash-can"></i>
-                </button>
-            </div>
-            
-            <p id="upload-status" class="text-[11px] text-center text-slate-400 h-4"></p>
-        </div>
+        <p class="text-[11px] text-slate-400">Pembayaran diproses secara otomatis sesuai nominal tagihan.</p>
     </div>
 
-    <!-- Firebase SDK (Modular v10+) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    <script>
+        // Payload Default QRIS Toko Suki Anda
+        const DEFAULT_PAYLOAD = "00020101021126570011ID.DANA.WWW011893600915303544414902090354441490303UMI51440014ID.CO.QRIS.WWW0215ID10266027894750303UMI5204549953033605802ID5909TOKO SUKI6015Kota Jakarta Pu610510210630417E0";
 
-        // Konfigurasi Firebase dari User
-        const firebaseConfig = {
-            apiKey: "AIzaSyDyytRYoCnBl2bZAHUsbuYQuqVk7FFv4qs",
-            authDomain: "testing-15137.firebaseapp.com",
-            databaseURL: "https://testing-15137-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "testing-15137",
-            storageBucket: "testing-15137.firebasestorage.app",
-            messagingSenderId: "842769771668",
-            appId: "1:842769771668:web:324ec92e5b6795e1369881"
+        window.onload = function() {
+            // Ambil nominal dari URL, default ke 0 jika tidak ada
+            let amount = getAmountFromURL() || 0;
+            generateDynamicQRIS(amount);
         };
 
-        // Inisialisasi App & Database
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        // Reference ke path: data/foto
-        const fotoRef = ref(db, 'data/foto');
-
-        // UI Elements
-        const firebaseImage = document.getElementById('firebase-image');
-        const loadingState = document.getElementById('loading-state');
-        const emptyState = document.getElementById('empty-state');
-        const statusBadge = document.getElementById('status-badge');
-        const statusText = document.getElementById('status-text');
-        const lastUpdateTime = document.getElementById('last-update-time');
-        const updateToast = document.getElementById('update-toast');
-        const imageFrame = document.getElementById('image-frame');
-        
-        const fileInput = document.getElementById('file-input');
-        const btnUpload = document.getElementById('btn-upload');
-        const btnDelete = document.getElementById('btn-delete');
-        const uploadStatus = document.getElementById('upload-status');
-
-        let isFirstLoad = true;
-
-        // 1. LISTENER REALTIME (onValue)
-        // Fungsi ini akan langsung terpanggil saat pertama kali load DAN saat ada perubahan data di node 'data/foto'
-        onValue(fotoRef, (snapshot) => {
-            // Set status menjadi Terhubung
-            updateConnectionStatus(true);
-
-            const fotoBase64 = snapshot.val();
-
-            if (fotoBase64) {
-                // Tampilkan foto jika data ada
-                displayImage(fotoBase64);
-                
-                // Efek Visual animasi ketika ada update baru (bukan load pertama)
-                if (!isFirstLoad) {
-                    triggerUpdateAnimation();
-                }
-                isFirstLoad = false;
-            } else {
-                // Tampilkan empty state jika data kosong/null
-                displayEmpty();
-                isFirstLoad = false;
-            }
-
-            // Catat Waktu Update Terakhir
-            const now = new Date();
-            lastUpdateTime.innerText = now.toLocaleTimeString('id-ID') + ' WIB';
-        }, (error) => {
-            console.error("Firebase Read Error:", error);
-            updateConnectionStatus(false, "Gagal Terhubung");
-            uploadStatus.innerText = "Error: " + error.message;
-            uploadStatus.className = "text-[11px] text-center text-red-400 h-4";
-        });
-
-        // Function untuk menampilkan Gambar Base64
-        function displayImage(base64Data) {
-            loadingState.classList.add('hidden');
-            emptyState.classList.add('hidden');
+        // Fungsi untuk mengambil angka nominal dari URL web
+        function getAmountFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let amount = urlParams.get('amount') || urlParams.get('nominal') || urlParams.get('rp');
             
-            // Cek apakah string sudah include header data:image
-            let srcString = base64Data;
-            if (!base64Data.startsWith('data:image')) {
-                srcString = `data:image/jpeg;base64,${base64Data}`;
-            }
-
-            firebaseImage.src = srcString;
-            firebaseImage.classList.remove('hidden');
-        }
-
-        // Function untuk tampilan kosong
-        function displayEmpty() {
-            loadingState.classList.add('hidden');
-            firebaseImage.classList.add('hidden');
-            emptyState.classList.remove('hidden');
-        }
-
-        // Status Indicator Helper
-        function updateConnectionStatus(isConnected, message = "Realtime Live") {
-            if (isConnected) {
-                statusBadge.className = "flex items-center space-x-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-medium";
-                statusBadge.innerHTML = `
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>${message}</span>
-                `;
-            } else {
-                statusBadge.className = "flex items-center space-x-1.5 bg-red-500/10 text-red-400 border border-red-500/30 px-3 py-1 rounded-full text-xs font-medium";
-                statusBadge.innerHTML = `
-                    <span class="w-2 h-2 rounded-full bg-red-400"></span>
-                    <span>${message}</span>
-                `;
-            }
-        }
-
-        // Efek Toast / Frame animasi saat gambar berubah
-        function triggerUpdateAnimation() {
-            // Flash frame
-            imageFrame.classList.add('img-update-flash');
-            setTimeout(() => imageFrame.classList.remove('img-update-flash'), 1000);
-
-            // Pop toast
-            updateToast.classList.remove('opacity-0');
-            setTimeout(() => {
-                updateToast.classList.add('opacity-0');
-            }, 2500);
-        }
-
-        // 2. FITUR UPLOAD GAMBAR BARU KE FIREBASE (TESTING REALTIME UPDATE)
-        btnUpload.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            // Batasi ukuran file opsional (misal max 2MB agar Base64 tidak terlalu besar)
-            if (file.size > 2 * 1024 * 1024) {
-                uploadStatus.innerText = "Gagal: Ukuran gambar maksimal 2MB!";
-                uploadStatus.className = "text-[11px] text-center text-amber-400 h-4";
-                return;
-            }
-
-            uploadStatus.innerText = "Membaca & mengonversi foto...";
-            uploadStatus.className = "text-[11px] text-center text-blue-400 h-4";
-            btnUpload.disabled = true;
-
-            const reader = new FileReader();
-            reader.onload = async function (event) {
-                const base64String = event.target.result;
-
-                try {
-                    uploadStatus.innerText = "Mengirim ke Firebase...";
-                    // Simpan data Base64 langsung ke path: data/foto
-                    await set(ref(db, 'data/foto'), base64String);
-                    
-                    uploadStatus.innerText = "Foto berhasil diupdate ke Realtime DB!";
-                    uploadStatus.className = "text-[11px] text-center text-emerald-400 h-4";
-                    
-                    setTimeout(() => { uploadStatus.innerText = ""; }, 3000);
-                } catch (err) {
-                    console.error("Upload Error:", err);
-                    uploadStatus.innerText = "Gagal simpan data: " + err.message;
-                    uploadStatus.className = "text-[11px] text-center text-red-400 h-4";
-                } finally {
-                    btnUpload.disabled = false;
-                    fileInput.value = ''; // Reset input file
+            if (!amount) {
+                const searchStr = window.location.search.replace('?', '');
+                if (!isNaN(searchStr) && searchStr.trim() !== '') {
+                    amount = searchStr;
                 }
-            };
-
-            reader.readAsDataURL(file);
-        });
-
-        // 3. FITUR HAPUS FOTO
-        btnDelete.addEventListener('click', async () => {
-            uploadStatus.innerText = "Menghapus foto...";
-            uploadStatus.className = "text-[11px] text-center text-amber-400 h-4";
-            try {
-                await remove(ref(db, 'data/foto'));
-                uploadStatus.innerText = "Foto di path data/foto berhasil dihapus.";
-                uploadStatus.className = "text-[11px] text-center text-slate-400 h-4";
-                setTimeout(() => { uploadStatus.innerText = ""; }, 3000);
-            } catch (err) {
-                uploadStatus.innerText = "Gagal menghapus: " + err.message;
-                uploadStatus.className = "text-[11px] text-center text-red-400 h-4";
             }
-        });
+            return amount ? parseInt(amount, 10) : null;
+        }
+
+        // Parse TLV String QRIS
+        function parseTLV(qrisString) {
+            let tags = {};
+            let i = 0;
+            let cleanStr = qrisString;
+            if (qrisString.includes("6304")) {
+                cleanStr = qrisString.substring(0, qrisString.lastIndexOf("6304"));
+            }
+
+            while (i < cleanStr.length) {
+                let tag = cleanStr.substring(i, i + 2);
+                let length = parseInt(cleanStr.substring(i + 2, i + 4), 10);
+                
+                if (isNaN(length)) break;
+
+                let value = cleanStr.substring(i + 4, i + 4 + length);
+                tags[tag] = value;
+                i += 4 + length;
+            }
+            return tags;
+        }
+
+        // Reconstruct TLV String
+        function buildTLV(tags) {
+            let result = "";
+            let sortedKeys = Object.keys(tags).sort((a, b) => parseInt(a) - parseInt(b));
+
+            for (let key of sortedKeys) {
+                let val = tags[key];
+                let len = val.length.toString().padStart(2, '0');
+                result += key + len + val;
+            }
+            return result;
+        }
+
+        // Perhitungan CRC-16 CCITT
+        function calculateCRC16(data) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < data.length; i++) {
+                let x = ((crc >> 8) ^ data.charCodeAt(i)) & 0xFF;
+                x ^= x >> 4;
+                crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
+            }
+            let hex = crc.toString(16).toUpperCase();
+            return hex.padStart(4, '0');
+        }
+
+        // Generate QRIS Dinamis & Langsung Render
+        function generateDynamicQRIS(amount) {
+            try {
+                let tags = parseTLV(DEFAULT_PAYLOAD);
+
+                // Ubah ke QRIS Dinamis (01 = 12)
+                tags['01'] = '12';
+                tags['53'] = '360';
+
+                // Masukkan Nominal jika ada
+                if (amount > 0) {
+                    tags['54'] = amount.toString();
+                } else {
+                    delete tags['54'];
+                }
+
+                let newPayload = buildTLV(tags) + "6304";
+                let finalQRIS = newPayload + calculateCRC16(newPayload);
+
+                // Render QR Code ukuran pas untuk discan
+                document.getElementById('qrcode').innerHTML = '';
+                new QRCode(document.getElementById('qrcode'), {
+                    text: finalQRIS,
+                    width: 230,
+                    height: 230,
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+
+                // Tampilkan nominal teks
+                document.getElementById('nominalText').innerText = 'Rp ' + amount.toLocaleString('id-ID');
+
+            } catch (err) {
+                console.error("Gagal memproses QRIS", err);
+            }
+        }
     </script>
 </body>
 </html>
